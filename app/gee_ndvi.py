@@ -31,24 +31,28 @@ _ee_ready = False
 _ee_error = None
 
 
-def _parse_key(raw: str) -> dict:
-    """Accept service account key as raw JSON, or base64-encoded JSON."""
+def _parse_key(raw: str) -> str:
+    """Accept service account key as raw JSON, or base64-encoded JSON.
+
+    Returns the normalized JSON **string** — ee.ServiceAccountCredentials
+    expects `key_data` to be a JSON string, not a dict.
+    """
     raw = raw.strip()
     if not raw:
-        return {}
+        raise ValueError("EE_SERVICE_ACCOUNT_KEY is empty")
     # Try direct JSON first
     try:
         obj = json.loads(raw)
         if isinstance(obj, dict) and "client_email" in obj:
-            return obj
+            return json.dumps(obj)
     except json.JSONDecodeError:
         pass
-    # Try base64
+    # Try base64 (Render users often store the key base64-encoded)
     try:
         decoded = base64.b64decode(raw, validate=True).decode("utf-8")
         obj = json.loads(decoded)
         if isinstance(obj, dict) and "client_email" in obj:
-            return obj
+            return json.dumps(obj)
     except Exception:  # noqa: BLE001
         pass
     raise ValueError("EE_SERVICE_ACCOUNT_KEY is not valid JSON or base64-JSON")
@@ -67,14 +71,19 @@ def _init_gee():
     # --- Path 1: service account (cloud deploy) ---
     if _SVC_EMAIL and _SVC_KEY_RAW:
         try:
-            key_data = _parse_key(_SVC_KEY_RAW)
-            creds = ee.ServiceAccountCredentials(_SVC_EMAIL, key_data=key_data)
+            key_json = _parse_key(_SVC_KEY_RAW)
+            creds = ee.ServiceAccountCredentials(_SVC_EMAIL, key_data=key_json)
             ee.Initialize(project=_GEE_PROJECT, credentials=creds)
             _ee_ready = True
+            _ee_error = None
             return
         except Exception as exc:  # noqa: BLE001
-            # Don't give up yet — try OAuth fallback below.
-            _ee_error = f"ServiceAccount auth failed: {exc}; trying local OAuth…"
+            # Service account was configured — keep the real error instead of
+            # masking it behind the generic OAuth message below. Falling back to
+            # OAuth on a headless host can only fail, and the real error is what
+            # tells us whether the key is malformed or the IAM roles are missing.
+            _ee_error = f"ServiceAccount auth failed: {exc}"
+            return
 
     # --- Path 2: local OAuth (dev machine) ---
     try:
@@ -88,10 +97,17 @@ _init_gee()
 
 
 def gee_status() -> dict:
-    """Return current GEE availability and an actionable hint."""
+    """Return current GEE availability plus env-var presence (no secrets)."""
     return {
         "ready": _ee_ready,
         "error": _ee_error,
+        "auth": "service_account" if (_SVC_EMAIL and _SVC_KEY_RAW) else "local_oauth",
+        "env": {
+            "EE_PROJECT": bool(_GEE_PROJECT),
+            "EE_SERVICE_ACCOUNT_EMAIL": bool(_SVC_EMAIL),
+            "EE_SERVICE_ACCOUNT_KEY": bool(_SVC_KEY_RAW),
+            "key_length": len(_SVC_KEY_RAW),
+        },
         "hint": None if _ee_ready else (
             "Set env var EE_PROJECT to your Earth Engine Cloud project, "
             "run `earthengine authenticate`, then restart the server."
