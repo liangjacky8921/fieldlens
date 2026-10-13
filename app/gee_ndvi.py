@@ -26,6 +26,7 @@ _SVC_KEY_RAW = environ.get("EE_SERVICE_ACCOUNT_KEY", "")
 # ---------------------------------------------------------------------------
 # Lazy GEE initialization: the app must boot even when credentials are missing.
 # ---------------------------------------------------------------------------
+ee = None  # module-level, set by _init_gee() or ImportError fallback below
 _ee_ready = False
 _ee_error = None
 
@@ -54,10 +55,11 @@ def _parse_key(raw: str) -> dict:
 
 
 def _init_gee():
-    """Try service account first, then local OAuth. Set _ee_ready / _ee_error."""
-    global _ee_ready, _ee_error
+    """Try service account first, then local OAuth. Set ee / _ee_ready / _ee_error."""
+    global _ee_ready, _ee_error, ee
     try:
-        import ee
+        import ee as _ee_module
+        ee = _ee_module
     except ImportError:
         _ee_error = "earthengine-api package not installed"
         return
