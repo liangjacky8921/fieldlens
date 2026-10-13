@@ -17,4 +17,16 @@ frontend/dist/
 _check_ollama.py
 _crop*.py
 
+# Secrets — NEVER commit GCP keys or service account JSON
+*.json
+!vercel.json
+!render.yaml
+# GCP / GEE service account keys (anywhere)
+*service-account*.json
+*credentials*.json
+
+# Data / DB
+*.db
+*.sqlite
+
 .vercel
