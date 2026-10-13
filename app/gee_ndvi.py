@@ -3,13 +3,25 @@
 Pulls Sentinel-2 SR harmonized imagery for a user-drawn orchard polygon,
 applies a simple QA60 cloud mask, computes per-scene NDVI spatial means,
 and returns a date-sorted time series.
+
+Auth strategy (order of precedence):
+  1. Service account JSON via env vars EE_SERVICE_ACCOUNT_EMAIL + EE_SERVICE_ACCOUNT_KEY
+     (key is the full JSON string, base64-optional — Render/Fly/etc pattern).
+  2. Local OAuth via `earthengine authenticate` + env EE_PROJECT (dev only).
+Falls back cleanly — every public function returns an "error" dict instead of raising.
 """
 
+import json
+import base64
 from datetime import datetime, timedelta
 from os import environ
 
-# GEE now requires a Cloud project; set one of these env vars before starting.
+# GEE Cloud project — required for both auth paths.
 _GEE_PROJECT = environ.get("EE_PROJECT") or environ.get("GEE_PROJECT")
+
+# Service account (for Render / cloud deploys, no interactive auth needed).
+_SVC_EMAIL = environ.get("EE_SERVICE_ACCOUNT_EMAIL", "")
+_SVC_KEY_RAW = environ.get("EE_SERVICE_ACCOUNT_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Lazy GEE initialization: the app must boot even when credentials are missing.
@@ -17,17 +29,60 @@ _GEE_PROJECT = environ.get("EE_PROJECT") or environ.get("GEE_PROJECT")
 _ee_ready = False
 _ee_error = None
 
-try:
-    import ee
 
+def _parse_key(raw: str) -> dict:
+    """Accept service account key as raw JSON, or base64-encoded JSON."""
+    raw = raw.strip()
+    if not raw:
+        return {}
+    # Try direct JSON first
+    try:
+        obj = json.loads(raw)
+        if isinstance(obj, dict) and "client_email" in obj:
+            return obj
+    except json.JSONDecodeError:
+        pass
+    # Try base64
+    try:
+        decoded = base64.b64decode(raw, validate=True).decode("utf-8")
+        obj = json.loads(decoded)
+        if isinstance(obj, dict) and "client_email" in obj:
+            return obj
+    except Exception:  # noqa: BLE001
+        pass
+    raise ValueError("EE_SERVICE_ACCOUNT_KEY is not valid JSON or base64-JSON")
+
+
+def _init_gee():
+    """Try service account first, then local OAuth. Set _ee_ready / _ee_error."""
+    global _ee_ready, _ee_error
+    try:
+        import ee
+    except ImportError:
+        _ee_error = "earthengine-api package not installed"
+        return
+
+    # --- Path 1: service account (cloud deploy) ---
+    if _SVC_EMAIL and _SVC_KEY_RAW:
+        try:
+            key_data = _parse_key(_SVC_KEY_RAW)
+            creds = ee.ServiceAccountCredentials(_SVC_EMAIL, key_data=key_data)
+            ee.Initialize(project=_GEE_PROJECT, credentials=creds)
+            _ee_ready = True
+            return
+        except Exception as exc:  # noqa: BLE001
+            # Don't give up yet — try OAuth fallback below.
+            _ee_error = f"ServiceAccount auth failed: {exc}; trying local OAuth…"
+
+    # --- Path 2: local OAuth (dev machine) ---
     try:
         ee.Initialize(project=_GEE_PROJECT) if _GEE_PROJECT else ee.Initialize()
         _ee_ready = True
-    except Exception as exc:  # noqa: BLE001 - surface any init failure
+    except Exception as exc:  # noqa: BLE001
         _ee_error = str(exc)
-except ImportError:
-    ee = None
-    _ee_error = "earthengine-api package not installed"
+
+
+_init_gee()
 
 
 def gee_status() -> dict:

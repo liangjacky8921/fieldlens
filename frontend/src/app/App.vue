@@ -33,7 +33,7 @@ const geojson = ref<object | null>(null)
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(12, 19, 16, 0.96);
+  background: rgba(16, 14, 10, 0.96);
   border-bottom: 1px solid var(--line);
 }
 
@@ -88,5 +88,13 @@ const geojson = ref<object | null>(null)
   color: var(--ink-3);
   padding: 18px 0 28px;
   border-top: 1px solid var(--line);
+}
+
+@media (max-width: 480px) {
+  .topbar-inner { height: 52px; gap: 8px; padding: 0 14px; }
+  .brand { font-size: 16px; }
+  .subtitle { display: none; }
+  .sep { display: none; }
+  .lang-btn { padding: 4px 10px; font-size: 12px; }
 }
 </style>

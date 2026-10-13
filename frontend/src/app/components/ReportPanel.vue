@@ -12,13 +12,52 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
 Chart.defaults.color = '#a7b8ad'
 Chart.defaults.borderColor = 'rgba(232, 239, 233, 0.08)'
 
+// API base: empty (same-origin) by default; VITE_API_BASE_URL set at build time for cross-deploy
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || ''
+
 const crop = ref('pomelo')
 const loading = ref(false)
 const statusMsg = ref('')
 const statusKind = ref<'info' | 'error'>('info')
 const lastReport = ref<any>(null)
+const isDemo = ref(false)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
+
+// ---------------------------------------------------------------------------
+// Demo data — shown when backend is unreachable (e.g. Vercel-only deployment).
+// This keeps /app visually functional for hackathon demos.
+// ---------------------------------------------------------------------------
+const DEMO = {
+  ndvi: {
+    dates: ['2026-09-17', '2026-09-24', '2026-09-27', '2026-10-07', '2026-10-12'],
+    ndvi: [0.412, 0.528, 0.487, 0.613, 0.554],
+    count: 5,
+  },
+  report: {
+    trend: 'stable',
+    en: {
+      summary: 'Canopy vigor is stable across the past 30 days of Sentinel-2 scenes. NDVI stays in the healthy range with no upward or downward drift.',
+      advice: [
+        'Maintain routine irrigation and fertilization — no urgent action needed.',
+        'Do a regular pest and disease walk-through every 1–2 weeks.',
+        'Watch the next few satellite passes for any sign of decline after rain.',
+      ],
+      source: 'demo',
+      trend: 'stable',
+    },
+    zh: {
+      summary: '过去 30 天 Sentinel-2 影像显示果树长势平稳，NDVI 保持在健康区间，未见明显上升或下降趋势。',
+      advice: [
+        '按常规水肥管理即可，暂无紧急事项。',
+        '每 1–2 周例行巡查一次病虫害。',
+        '关注雨后后续卫星影像，警惕由稳转弱。',
+      ],
+      source: 'demo',
+      trend: 'stable',
+    },
+  },
+}
 
 const rep = computed(() => {
   const r = lastReport.value?.report
@@ -70,16 +109,29 @@ async function generate() {
   statusMsg.value = t('generating')
   statusKind.value = 'info'
   lastReport.value = null
+  isDemo.value = false
 
   try {
-    const resp = await fetch('/api/report', {
+    // AbortController: 15s timeout so Render cold-start (sleeping free tier)
+    // doesn't hang the UI forever — falls back to demo data gracefully.
+    const ctrl = new AbortController()
+    const tid = setTimeout(() => ctrl.abort(), 15000)
+
+    const resp = await fetch(`${API_BASE}/api/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
       // lang=both: one call returns EN + ZH so the toggle is instant
       body: JSON.stringify({ geojson: props.geojson, crop: crop.value, lang: 'both' }),
     })
-    const data = await resp.json()
+    clearTimeout(tid)
 
+    if (!resp.ok) {
+      // Backend unreachable or non-200 → gracefully fall back to demo data
+      throw new Error(`HTTP ${resp.status}`)
+    }
+
+    const data = await resp.json()
     if (data.ndvi && data.ndvi.error) {
       statusMsg.value = /GEE/i.test(data.ndvi.error) ? t('errGee') : t('noData')
       statusKind.value = 'error'
@@ -94,8 +146,11 @@ async function generate() {
     lastReport.value = data
     statusMsg.value = ''
   } catch {
-    statusMsg.value = t('errNetwork')
-    statusKind.value = 'error'
+    // Demo mode: show sample data so the UI isn't dead during hackathon demos.
+    lastReport.value = DEMO
+    isDemo.value = true
+    statusMsg.value = ''
+    statusKind.value = 'info'
   } finally {
     loading.value = false
   }
@@ -118,6 +173,7 @@ async function generate() {
 
     <p class="status" :class="{ error: statusKind === 'error' }">
       <span v-if="loading" class="spinner" aria-hidden="true"></span>{{ statusMsg }}
+      <span v-if="isDemo" class="demo-badge">DEMO · 示例数据</span>
     </p>
 
     <article v-if="rep" class="card">
@@ -262,5 +318,30 @@ async function generate() {
   margin-top: 14px;
   font-size: 11.5px;
   color: var(--ink-3);
+}
+
+.demo-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: var(--amber-deep);
+  color: var(--amber-bright);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  vertical-align: middle;
+}
+
+@media (max-width: 600px) {
+  .panel { padding: 14px clamp(12px, 4vw, 20px) 32px; }
+  .controls { flex-direction: column; }
+  .crop, .gen { width: 100%; flex: none; }
+  .card { padding: 14px; }
+  .chart-wrap { height: 200px; }
+  .summary { font-size: 14px; line-height: 1.65; }
+  .advice { font-size: 13.5px; }
+  .card-head h2 { font-size: 14px; }
+  .hint { font-size: 12.5px; }
 }
 </style>

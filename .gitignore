@@ -16,3 +16,5 @@ frontend/dist/
 *.log
 _check_ollama.py
 _crop*.py
+
+.vercel

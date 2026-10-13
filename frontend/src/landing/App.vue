@@ -79,7 +79,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 }
 
 .nav--scrolled {
-  background: rgba(12, 19, 16, 0.92);
+  background: rgba(16, 14, 10, 0.92);
   border-bottom-color: var(--line);
 }
 
@@ -169,5 +169,20 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 .footer-sign-name {
   color: var(--ink);
   font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .nav-inner { height: 56px; }
+  .brand { font-size: 17px; gap: 8px; }
+  .brand-mark { width: 8px; height: 8px; }
+  .nav-links { gap: 12px; }
+  .nav-link { font-size: 13px; }
+  .lang-btn { padding: 5px 10px; font-size: 12px; }
+  .btn--small { padding: 9px 14px; font-size: 13px; }
+}
+@media (max-width: 360px) {
+  .nav-links { gap: 8px; }
+  .nav-link { font-size: 12px; }
+  .btn--small { display: none; }
 }
 </style>

@@ -1,0 +1,31 @@
+# FieldLens FastAPI backend — Render free-tier Python web service.
+#
+# Runtime: Python 3.10+ (earthengine-api needs >=3.10).
+# Build:   pip install -r requirements.txt
+# Start:   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+#
+# Environment variables (Render Dashboard → Environment):
+#   EE_PROJECT               = seventh-acrobat-494312-s0   (required)
+#   EE_SERVICE_ACCOUNT_EMAIL = your-service-account@your-project.iam.gserviceaccount.com
+#   EE_SERVICE_ACCOUNT_KEY   = { "type": "service_account", ... }   (full JSON, or base64)
+#
+# Note: Ollama gemma2:2b is NOT available on Render's free tier (no GPU).
+# The rule-based fallback in app/advise.py handles this automatically —
+# reports use deterministic bilingual templates keyed by trend (rising/stable/declining/volatile).
+services:
+  - name: fieldlens-api
+    type: web
+    runtime: python
+    plan: free
+    autoDeploy: false
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: EE_PROJECT
+        value: seventh-acrobat-494312-s0
+      - key: EE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: EE_SERVICE_ACCOUNT_KEY
+        sync: false

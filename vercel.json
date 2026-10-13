@@ -1,0 +1,16 @@
+{
+  "buildCommand": "cd frontend && npm ci --no-audit --no-fund && npm run build",
+  "outputDirectory": "static",
+  "rewrites": [
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/app/", "destination": "/app.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}

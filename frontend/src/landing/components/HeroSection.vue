@@ -172,7 +172,7 @@ const splitType = computed(() => (i18n.lang === 'zh' ? 'chars' : 'words'))
     clip-path: none;
   }
   .hero-photo-fade {
-    background: linear-gradient(to right, rgba(12, 19, 16, 0.96), rgba(12, 19, 16, 0.82));
+    background: linear-gradient(to right, rgba(16, 14, 10, 0.96), rgba(16, 14, 10, 0.82));
   }
   .hero-grid { grid-template-columns: 1fr; }
 }

@@ -56,4 +56,8 @@ const reduced = usePreferredReducedMotion()
 .cta-title {
   font-size: clamp(30px, 4vw, 52px);
 }
+
+@media (max-width: 600px) {
+  .cta { padding: 72px 0; }
+}
 </style>
