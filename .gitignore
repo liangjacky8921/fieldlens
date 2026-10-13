@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Temp / IDE
+*.tmp
+.vscode/
+.idea/
+.DS_Store
+*.log
+_check_ollama.py
+_crop*.py

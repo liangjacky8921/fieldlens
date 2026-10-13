@@ -1,0 +1,92 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import MapPanel from './components/MapPanel.vue'
+import ReportPanel from './components/ReportPanel.vue'
+import { i18n, toggleLang, useT } from '../i18n'
+
+const t = useT()
+const geojson = ref<object | null>(null)
+</script>
+
+<template>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-cell">
+        <a class="brand" href="/">FieldLens</a>
+        <span class="sep" aria-hidden="true">/</span>
+        <p class="subtitle">{{ t('subtitle') }}</p>
+      </div>
+      <button class="lang-btn" type="button" @click="toggleLang">{{ t('langBtn') }}</button>
+    </div>
+  </header>
+
+  <main>
+    <MapPanel @geojson="(g: object | null) => (geojson = g)" />
+    <ReportPanel :geojson="geojson" />
+  </main>
+
+  <footer class="foot">GEE Sentinel-2 NDVI · Local Gemma LLM · FieldLens hackathon demo</footer>
+</template>
+
+<style scoped>
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(12, 19, 16, 0.96);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 32px);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.sep { color: var(--ink-3); }
+
+.subtitle {
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lang-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.foot {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-3);
+  padding: 18px 0 28px;
+  border-top: 1px solid var(--line);
+}
+</style>

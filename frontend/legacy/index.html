@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>FieldLens</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+  :root {
+    --green-900: #14301f; --green-700: #1f5136; --green-500: #2e7d4f;
+    --green-100: #e3efe6; --cream: #faf7f0; --ink: #22302a;
+    --amber: #b7791f; --red: #b3402e; --blue: #2b6cb0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--cream); color: var(--ink);
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; background: var(--green-900); color: #fff;
+    position: sticky; top: 0; z-index: 1000;
+  }
+  .brand h1 { font-size: 20px; letter-spacing: .5px; }
+  .brand p { font-size: 11px; opacity: .85; margin-top: 2px; }
+  #langBtn {
+    border: 1px solid rgba(255,255,255,.5); background: transparent; color: #fff;
+    border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+  }
+  #map { height: 46vh; min-height: 300px; width: 100%; }
+  .panel { padding: 14px 16px 24px; max-width: 720px; margin: 0 auto; }
+  .controls { display: flex; gap: 10px; margin: 12px 0; }
+  select, #genBtn {
+    flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; border: 1px solid #cfd8d2;
+  }
+  #genBtn {
+    background: var(--green-700); color: #fff; border: none; font-weight: 600; cursor: pointer;
+  }
+  #genBtn:disabled { background: #9db3a6; cursor: not-allowed; }
+  .hint { font-size: 13px; color: #5c6f64; margin-bottom: 8px; }
+  .card {
+    background: #fff; border: 1px solid #e4e9e4; border-radius: 14px;
+    padding: 14px; margin-top: 14px; box-shadow: 0 1px 4px rgba(20,48,31,.06);
+  }
+  .card h2 { font-size: 15px; margin-bottom: 10px; color: var(--green-900); }
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; color: #fff;
+  }
+  .badge.rising { background: var(--green-500); }
+  .badge.stable { background: var(--blue); }
+  .badge.declining { background: var(--red); }
+  .badge.volatile { background: var(--amber); }
+  #summary { margin-top: 10px; font-size: 14px; line-height: 1.6; }
+  #adviceList { margin-top: 8px; padding-left: 20px; font-size: 14px; line-height: 1.7; }
+  .chart-wrap { position: relative; height: 220px; }
+  #status { font-size: 13px; margin-top: 10px; min-height: 18px; }
+  #status.error { color: var(--red); }
+  #status.info { color: var(--green-700); }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid var(--green-100);
+    border-top-color: var(--green-700); border-radius: 50%; vertical-align: -2px;
+    animation: spin .8s linear infinite; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+  footer { text-align: center; font-size: 11px; color: #8a9a90; padding: 18px 0 28px; }
+  .leaflet-draw-toolbar a { background-color: #fff; }
+  @media (min-width: 720px) { #map { height: 52vh; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>FieldLens</h1>
+    <p id="subtitle"></p>
+  </div>
+  <button id="langBtn" type="button">中文</button>
+</header>
+
+<div id="map"></div>
+
+<div class="panel">
+  <p class="hint" id="drawHint"></p>
+  <div class="controls">
+    <select id="cropSelect">
+      <option value="pomelo" data-i18n="cropPomelo"></option>
+      <option value="citrus" data-i18n="cropCitrus"></option>
+    </select>
+    <button id="genBtn" type="button"></button>
+  </div>
+  <p id="status"></p>
+
+  <div id="resultCard" class="card hidden">
+    <h2 id="trendTitle"></h2>
+    <span id="trendBadge" class="badge"></span>
+    <p id="summary"></p>
+    <h2 id="adviceTitle" style="margin-top:14px;"></h2>
+    <ul id="adviceList"></ul>
+  </div>
+
+  <div id="chartCard" class="card hidden">
+    <h2 id="chartTitle"></h2>
+    <div class="chart-wrap"><canvas id="ndviChart"></canvas></div>
+  </div>
+</div>
+
+<footer>GEE Sentinel-2 NDVI · Local Gemma LLM · FieldLens hackathon demo</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Bilingual dictionary (EN default; judges are international)
+// ---------------------------------------------------------------------------
+const I18N = {
+  en: {
+    subtitle: "Satellite vigor monitoring for high-value orchards",
+    drawHint: "Draw your orchard boundary on the map, then generate a report.",
+    cropPomelo: "Pomelo 金柚",
+    cropCitrus: "Citrus 柑橘",
+    generate: "Generate Report",
+    generating: "Analyzing satellite imagery…",
+    trendTitle: "Vigor trend",
+    adviceTitle: "Suggestions",
+    chartTitle: "NDVI time series (last 90 days)",
+    needPolygon: "Please draw a field polygon first.",
+    errGeneric: "Something went wrong. Please try again.",
+    errGee: "Satellite service unavailable. Check GEE authentication.",
+    errNetwork: "Network error. Is the backend running?",
+    noData: "No usable satellite scenes for this plot (clouds or coverage). Try a larger area.",
+    trend: { rising: "Rising", stable: "Stable", declining: "Declining", volatile: "Variable" },
+    langBtn: "中文"
+  },
+  zh: {
+    subtitle: "高价值果园长势遥感监测",
+    drawHint: "在地图上圈出你的果园地块，然后生成报告。",
+    cropPomelo: "金柚 Pomelo",
+    cropCitrus: "柑橘 Citrus",
+    generate: "生成报告",
+    generating: "正在分析卫星影像…",
+    trendTitle: "长势趋势",
+    adviceTitle: "种植建议",
+    chartTitle: "NDVI 长势曲线（近 90 天）",
+    needPolygon: "请先在地图上画一个地块多边形。",
+    errGeneric: "出错了，请重试。",
+    errGee: "卫星服务暂不可用，请检查 GEE 认证。",
+    errNetwork: "网络错误，请确认后端已启动。",
+    noData: "该地块近期无可用卫星影像（云层遮挡或覆盖不足），试试画大一点。",
+    trend: { rising: "上升", stable: "平稳", declining: "下降", volatile: "波动" },
+    langBtn: "EN"
+  }
+};
+let lang = "en";
+let lastReport = null;   // cached bilingual report for instant language switch
+
+function t(key) { return I18N[lang][key]; }
+
+function applyLang() {
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.getElementById("langBtn").textContent = t("langBtn");
+  document.getElementById("subtitle").textContent = t("subtitle");
+  document.getElementById("drawHint").textContent = t("drawHint");
+  document.getElementById("genBtn").textContent = t("generate");
+  document.getElementById("trendTitle").textContent = t("trendTitle");
+  document.getElementById("adviceTitle").textContent = t("adviceTitle");
+  document.getElementById("chartTitle").textContent = t("chartTitle");
+  const sel = document.getElementById("cropSelect");
+  sel.options[0].textContent = t("cropPomelo");
+  sel.options[1].textContent = t("cropCitrus");
+  if (lastReport) renderReport(lastReport);  // re-render cached report in new language
+}
+
+document.getElementById("langBtn").addEventListener("click", () => {
+  lang = lang === "en" ? "zh" : "en";
+  applyLang();
+});
+
+// ---------------------------------------------------------------------------
+// Map + drawing (default view: Meizhou, Guangdong)
+// ---------------------------------------------------------------------------
+const map = L.map("map").setView([24.28, 116.12], 13);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  attribution: "Esri World Imagery", maxZoom: 19
+}).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap", maxZoom: 19, opacity: 0.25
+}).addTo(map);
+
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+const drawControl = new L.Control.Draw({
+  draw: { polygon: true, polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false },
+  edit: { featureGroup: drawnItems }
+});
+map.addControl(drawControl);
+
+let currentGeoJSON = null;
+map.on(L.Draw.Event.CREATED, (e) => {
+  drawnItems.clearLayers();
+  drawnItems.addLayer(e.layer);
+  currentGeoJSON = e.layer.toGeoJSON().geometry;
+});
+map.on(L.Draw.Event.DELETED, () => { currentGeoJSON = null; });
+
+// ---------------------------------------------------------------------------
+// Report generation
+// ---------------------------------------------------------------------------
+const statusEl = document.getElementById("status");
+const genBtn = document.getElementById("genBtn");
+let chart = null;
+
+function setStatus(msg, kind = "info", spinning = false) {
+  statusEl.className = kind;
+  statusEl.innerHTML = (spinning ? '<span class="spinner"></span>' : "") + (msg || "");
+}
+
+function renderReport(payload) {
+  const { ndvi, report } = payload;
+  const rep = report.en && report.zh ? report[lang] : report;  // bilingual or single
+  const trendKey = (report.trend || rep.trend || "stable");
+
+  const badge = document.getElementById("trendBadge");
+  badge.textContent = t("trend")[trendKey] || trendKey;
+  badge.className = "badge " + trendKey;
+  document.getElementById("summary").textContent = rep.summary || "";
+
+  const ul = document.getElementById("adviceList");
+  ul.innerHTML = "";
+  (rep.advice || []).forEach((a) => {
+    const li = document.createElement("li");
+    li.textContent = a;
+    ul.appendChild(li);
+  });
+  document.getElementById("resultCard").classList.remove("hidden");
+
+  if (ndvi && ndvi.dates && ndvi.dates.length) {
+    document.getElementById("chartCard").classList.remove("hidden");
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById("ndviChart"), {
+      type: "line",
+      data: {
+        labels: ndvi.dates,
+        datasets: [{
+          label: "NDVI",
+          data: ndvi.ndvi,
+          borderColor: "#2e7d4f",
+          backgroundColor: "rgba(46,125,79,.12)",
+          fill: true, tension: 0.3, pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { suggestedMin: 0, suggestedMax: 1 } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+}
+
+genBtn.addEventListener("click", async () => {
+  if (!currentGeoJSON) { setStatus(t("needPolygon"), "error"); return; }
+  genBtn.disabled = true;
+  setStatus(t("generating"), "info", true);
+  document.getElementById("resultCard").classList.add("hidden");
+  document.getElementById("chartCard").classList.add("hidden");
+  lastReport = null;
+
+  try {
+    const resp = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        geojson: currentGeoJSON,
+        crop: document.getElementById("cropSelect").value,
+        lang: "both"          // fetch EN+ZH once so language toggle is instant
+      })
+    });
+    const data = await resp.json();
+
+    if (data.ndvi && data.ndvi.error) {
+      const msg = /GEE/i.test(data.ndvi.error) ? t("errGee") : t("noData");
+      setStatus(msg, "error");
+      return;
+    }
+    if (!data.report) { setStatus(t("errGeneric"), "error"); return; }
+
+    lastReport = data;
+    renderReport(data);
+    setStatus("", "info");
+  } catch (err) {
+    setStatus(t("errNetwork"), "error");
+  } finally {
+    genBtn.disabled = false;
+  }
+});
+
+applyLang();
+</script>
+</body>
+</html>
