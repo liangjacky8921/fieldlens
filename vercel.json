@@ -3,7 +3,8 @@
   "outputDirectory": "static",
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },
-    { "source": "/app/", "destination": "/app.html" }
+    { "source": "/app/", "destination": "/app.html" },
+    { "source": "/api/:path*", "destination": "https://fieldlens-api.onrender.com/api/:path*" }
   ],
   "headers": [
     {
