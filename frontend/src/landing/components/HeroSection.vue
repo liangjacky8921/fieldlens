@@ -132,8 +132,8 @@ const splitType = computed(() => (i18n.lang === 'zh' ? 'chars' : 'words'))
 }
 
 .hero-title {
-  font-size: clamp(42px, 6.5vw, 82px);
-  line-height: 1.05;
+  font-size: clamp(26px, 7.2vw, 82px);
+  line-height: 1.1;
   margin: 0 0 22px;
 }
 

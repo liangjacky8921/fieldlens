@@ -46,6 +46,8 @@ const geojson = ref<object | null>(null)
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .brand-cell {
@@ -53,15 +55,17 @@ const geojson = ref<object | null>(null)
   align-items: baseline;
   gap: 10px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .brand {
   font-family: var(--font-serif);
   font-size: 19px;
   color: var(--ink);
+  flex-shrink: 0;
 }
 
-.sep { color: var(--ink-3); }
+.sep { color: var(--ink-3); flex-shrink: 0; }
 
 .subtitle {
   font-size: 12px;
@@ -80,6 +84,7 @@ const geojson = ref<object | null>(null)
   font-size: 13px;
   cursor: pointer;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .foot {

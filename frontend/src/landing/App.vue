@@ -88,6 +88,8 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   align-items: center;
   justify-content: space-between;
   height: 64px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .brand {
@@ -97,6 +99,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .brand-mark {
@@ -111,11 +114,14 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   display: flex;
   align-items: center;
   gap: 22px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .nav-link {
   color: var(--ink-2);
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .nav-link:hover { color: var(--ink); }
@@ -128,6 +134,8 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .footer {
@@ -137,12 +145,14 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 .footer-waves {
   height: 170px;
   border-bottom: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .footer-inner {
   padding: 26px 0 34px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -175,14 +185,18 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   .nav-inner { height: 56px; }
   .brand { font-size: 17px; gap: 8px; }
   .brand-mark { width: 8px; height: 8px; }
-  .nav-links { gap: 12px; }
+  .nav-links { gap: 10px; }
   .nav-link { font-size: 13px; }
   .lang-btn { padding: 5px 10px; font-size: 12px; }
   .btn--small { padding: 9px 14px; font-size: 13px; }
+  .footer-inner { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .footer-right { text-align: left; }
+  .footer-waves { height: 100px; }
 }
-@media (max-width: 360px) {
-  .nav-links { gap: 8px; }
-  .nav-link { font-size: 12px; }
+@media (max-width: 440px) {
+  .nav-links .nav-link[href="#orchard"],
+  .nav-links .nav-link[href="#how"] { display: none; }
   .btn--small { display: none; }
+  .nav-links { gap: 10px; }
 }
 </style>
