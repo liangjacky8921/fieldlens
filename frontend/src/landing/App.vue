@@ -63,6 +63,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
         <p class="footer-note">{{ t('footerNote') }}</p>
       </div>
       <div class="footer-right">
+        <a class="footer-gh" href="https://github.com/liangjacky8921/fieldlens" target="_blank" rel="noopener">GitHub ↗</a>
         <p class="footer-sign">Designed by <span class="footer-sign-name">Lam Jacky</span></p>
       </div>
     </div>
@@ -171,6 +172,20 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 
 .footer-right {
   text-align: right;
+}
+
+.footer-gh {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--amber);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212, 164, 78, 0.35);
+  padding-bottom: 1px;
+  margin-bottom: 6px;
+}
+
+.footer-gh:hover {
+  color: var(--amber-bright, #e8bc66);
 }
 
 .footer-sign {

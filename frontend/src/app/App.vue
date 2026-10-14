@@ -61,7 +61,7 @@ function onReport(data: any) {
     </div>
   </main>
 
-  <footer class="foot">{{ t('toolFooter') }}</footer>
+  <footer class="foot">{{ t('toolFooter') }} · <a class="foot-gh" href="https://github.com/liangjacky8921/fieldlens" target="_blank" rel="noopener">GitHub ↗</a></footer>
 </template>
 
 <style scoped>
@@ -149,6 +149,15 @@ function onReport(data: any) {
   color: var(--ink-3);
   padding: 18px 0 28px;
   border-top: 1px solid var(--line);
+}
+
+.foot-gh {
+  color: var(--amber);
+  text-decoration: none;
+}
+
+.foot-gh:hover {
+  color: var(--amber-bright, #e8bc66);
 }
 
 /* Mobile: stacked layout */
