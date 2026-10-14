@@ -12,6 +12,7 @@ the trend is stable.
 """
 
 import json
+import re
 from datetime import datetime
 
 import requests
@@ -347,17 +348,29 @@ def _build_prompt(ndvi_data: dict, crop: str, lang: str, features: dict) -> str:
 
 def _parse_model_output(text: str) -> dict:
     """Split model output into verdict, summary sentence, and advice lines."""
-    lines = [ln.strip(" -*•\t") for ln in text.splitlines()]
-    lines = [ln for ln in lines if ln]
+    # Normalize: drop markdown bold remnants, bullet markers, and blanks
+    lines = []
+    for ln in text.splitlines():
+        ln = ln.replace("**", "").strip(" -*•\t").strip()
+        if ln:
+            lines.append(ln)
     if not lines:
         return {"verdict": "", "summary": "", "advice": []}
 
-    # First line might be the verdict
+    # First line might be the verdict (EN keyword or ZH 结论：/判定：)
     verdict = ""
     summary_idx = 0
-    first_lower = lines[0].lower()
+    first = lines[0]
+    first_lower = first.lower()
+    zh_verdict_map = {"旺盛": "vigorous", "关注": "watch", "告警": "alert"}
     if first_lower.startswith(("vigorous", "watch", "alert")):
         verdict = first_lower.split()[0]
+        summary_idx = 1
+    elif ("结论" in first or "判定" in first) and any(z in first for z in zh_verdict_map):
+        for zh, en in zh_verdict_map.items():
+            if zh in first:
+                verdict = en
+                break
         summary_idx = 1
     elif "vigorous" in first_lower:
         verdict = "vigorous"
@@ -370,11 +383,29 @@ def _parse_model_output(text: str) -> dict:
         summary_idx = 1
 
     remaining = lines[summary_idx:]
+
+    # Drop header-only lines ("Actions:" etc.) and summary-restating lines
+    def _is_header(ln: str) -> bool:
+        low = ln.lower().rstrip(":：").strip()
+        if low in ("actions", "行动", "建议", "advice", "recommendations"):
+            return True
+        return ln.startswith(("总结：", "总结:", "Summary:"))
+
+    remaining = [ln for ln in remaining if not _is_header(ln)]
     if not remaining:
         return {"verdict": verdict, "summary": lines[0], "advice": []}
 
-    summary = remaining[0]
-    advice = [ln for ln in remaining[1:] if len(ln) > 3][:3]
+    summary = re.sub(r"^总结[：:]\s*", "", remaining[0])
+
+    # Advice: strip leading numbering ("1." "1、" "（1）" "一、") — up to 3 items
+    advice = []
+    for ln in remaining[1:]:
+        clean = re.sub(r"^[（(]?[0-9]+[)）.、]\s*", "", ln)
+        clean = re.sub(r"^[一二三四五][、.]\s*", "", clean)
+        if len(clean) > 3:
+            advice.append(clean)
+        if len(advice) >= 3:
+            break
     return {"verdict": verdict, "summary": summary, "advice": advice}
 
 
