@@ -30,12 +30,22 @@ onMounted(() => {
   drawnItems = new L.FeatureGroup()
   map.addLayer(drawnItems)
 
-  // Localize Leaflet.draw tooltips
-  L.drawLocal.draw.handlers.polygon.tooltipStart = () => t('drawPolygon')
-  L.drawLocal.draw.handlers.polygon.tooltipEnd = () => t('finish')
-  L.drawLocal.draw.handlers.polygon.tooltipCont = () => ''
-  L.drawLocal.edit.edit.handlers.edit.tooltip.text.start = () => t('editLayers')
-  L.drawLocal.edit.edit.handlers.removeAll.tooltip.text = () => t('deleteLayers')
+  // Localize Leaflet.draw tooltips.
+  // Guard: leaflet-draw may not set drawLocal in all Vite bundle configurations;
+  // the map still works without localization (falls back to English defaults).
+  const dh = L.drawLocal?.draw?.handlers
+  if (dh?.polygon) {
+    dh.polygon.tooltipStart = () => t('drawPolygon')
+    dh.polygon.tooltipEnd = () => t('finish')
+    dh.polygon.tooltipCont = () => ''
+  }
+  const eh = L.drawLocal?.edit?.edit?.handlers
+  if (eh?.edit?.tooltip?.text) {
+    eh.edit.tooltip.text.start = () => t('editLayers')
+  }
+  if (eh?.removeAll?.tooltip?.text) {
+    eh.removeAll.tooltip.text = () => t('deleteLayers')
+  }
 
   map.addControl(
     new L.Control.Draw({
