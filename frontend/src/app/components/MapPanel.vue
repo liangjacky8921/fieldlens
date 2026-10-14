@@ -4,10 +4,13 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw'
 import 'leaflet-draw/dist/leaflet.draw.css'
+import { i18n, useT } from '../../i18n'
 
 const emit = defineEmits<{ (e: 'geojson', g: object | null): void }>()
+const t = useT()
 const el = ref<HTMLDivElement | null>(null)
 let map: L.Map | null = null
+let drawnItems: L.FeatureGroup | null = null
 
 onMounted(() => {
   // Default view: Meizhou, Guangdong (pomelo / citrus country)
@@ -24,8 +27,15 @@ onMounted(() => {
     opacity: 0.25,
   }).addTo(map)
 
-  const drawnItems = new L.FeatureGroup()
+  drawnItems = new L.FeatureGroup()
   map.addLayer(drawnItems)
+
+  // Localize Leaflet.draw tooltips
+  L.drawLocal.draw.handlers.polygon.tooltipStart = () => t('drawPolygon')
+  L.drawLocal.draw.handlers.polygon.tooltipEnd = () => t('finish')
+  L.drawLocal.draw.handlers.polygon.tooltipCont = () => ''
+  L.drawLocal.edit.edit.handlers.edit.tooltip.text.start = () => t('editLayers')
+  L.drawLocal.edit.edit.handlers.removeAll.tooltip.text = () => t('deleteLayers')
 
   map.addControl(
     new L.Control.Draw({
@@ -35,8 +45,8 @@ onMounted(() => {
   )
 
   map.on(L.Draw.Event.CREATED, (e: any) => {
-    drawnItems.clearLayers()
-    drawnItems.addLayer(e.layer)
+    drawnItems!.clearLayers()
+    drawnItems!.addLayer(e.layer)
     emit('geojson', e.layer.toGeoJSON().geometry)
   })
 
@@ -44,6 +54,25 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => map?.remove())
+
+function loadDemoPolygon(geojson: object) {
+  if (!map || !drawnItems) return
+  drawnItems.clearLayers()
+  const layer = L.geoJSON(geojson, { color: '#d4a44e', weight: 2, fillOpacity: 0.15 })
+  drawnItems.addLayer(layer)
+  // Fly to the polygon
+  const bounds = layer.getBounds()
+  map.fitBounds(bounds, { padding: [40, 40] })
+  emit('geojson', geojson)
+}
+
+function clearAll() {
+  if (!drawnItems) return
+  drawnItems.clearLayers()
+  emit('geojson', null)
+}
+
+defineExpose({ loadDemoPolygon, clearAll })
 </script>
 
 <template>

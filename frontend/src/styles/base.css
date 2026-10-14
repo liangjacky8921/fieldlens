@@ -92,6 +92,11 @@ a { color: var(--amber-bright); text-decoration: none; }
   padding: 0 clamp(20px, 4vw, 48px);
 }
 
+/* Sticky header offset: prevents nav from hiding section titles on anchor jump */
+section[id] {
+  scroll-margin-top: 80px;
+}
+
 .kicker {
   font-family: var(--font-sans);
   font-size: 12px;

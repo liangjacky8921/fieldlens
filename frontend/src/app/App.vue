@@ -3,9 +3,21 @@ import { ref } from 'vue'
 import MapPanel from './components/MapPanel.vue'
 import ReportPanel from './components/ReportPanel.vue'
 import { i18n, toggleLang, useT } from '../i18n'
+import { SAMPLE_FIELD } from '../data/references'
 
 const t = useT()
 const geojson = ref<object | null>(null)
+const mapRef = ref<InstanceType<typeof MapPanel> | null>(null)
+
+function loadDemoField() {
+  geojson.value = SAMPLE_FIELD.polygon
+  mapRef.value?.loadDemoPolygon(SAMPLE_FIELD.polygon)
+}
+
+function clearField() {
+  geojson.value = null
+  mapRef.value?.clearAll()
+}
 </script>
 
 <template>
@@ -21,11 +33,11 @@ const geojson = ref<object | null>(null)
   </header>
 
   <main>
-    <MapPanel @geojson="(g: object | null) => (geojson = g)" />
-    <ReportPanel :geojson="geojson" />
+    <MapPanel ref="mapRef" @geojson="(g: object | null) => (geojson = g)" />
+    <ReportPanel :geojson="geojson" @load-demo="loadDemoField" @clear="clearField" />
   </main>
 
-  <footer class="foot">GEE Sentinel-2 NDVI · Local Gemma LLM · FieldLens hackathon demo</footer>
+  <footer class="foot">{{ t('toolFooter') }}</footer>
 </template>
 
 <style scoped>

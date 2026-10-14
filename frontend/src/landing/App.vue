@@ -6,6 +6,7 @@ import HowSection from './components/HowSection.vue'
 import DataPreviewSection from './components/DataPreviewSection.vue'
 import OrchardStorySection from './components/OrchardStorySection.vue'
 import CtaSection from './components/CtaSection.vue'
+import DataSourcesSection from './components/DataSourcesSection.vue'
 import LineWaves from '../vuebits/LineWaves.vue'
 import { i18n, toggleLang, useT } from '../i18n'
 
@@ -38,6 +39,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
     <HowSection />
     <DataPreviewSection />
     <OrchardStorySection />
+    <DataSourcesSection />
     <CtaSection />
   </main>
 

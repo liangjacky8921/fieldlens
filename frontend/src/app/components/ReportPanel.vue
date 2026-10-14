@@ -2,17 +2,17 @@
 import { computed, ref, watch } from 'vue'
 import { Chart, CategoryScale, Filler, Legend, LineController, LineElement, LinearScale, PointElement, Tooltip } from 'chart.js'
 import { i18n, useT } from '../../i18n'
+import { SAMPLE_NDVI, SAMPLE_REPORT, LEGEND_STOPS } from '../../data/references'
 
 const props = defineProps<{ geojson: object | null }>()
+const emit = defineEmits<{ (e: 'load-demo'): void; (e: 'clear'): void }>()
 
 const t = useT()
 
-// Tree-shaken Chart.js: line chart only
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Filler)
 Chart.defaults.color = '#a7b8ad'
 Chart.defaults.borderColor = 'rgba(232, 239, 233, 0.08)'
 
-// API base: empty (same-origin) by default; VITE_API_BASE_URL set at build time for cross-deploy
 const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || ''
 
 const crop = ref('pomelo')
@@ -23,41 +23,6 @@ const lastReport = ref<any>(null)
 const isDemo = ref(false)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
-
-// ---------------------------------------------------------------------------
-// Demo data — shown when backend is unreachable (e.g. Vercel-only deployment).
-// This keeps /app visually functional for hackathon demos.
-// ---------------------------------------------------------------------------
-const DEMO = {
-  ndvi: {
-    dates: ['2026-09-17', '2026-09-24', '2026-09-27', '2026-10-07', '2026-10-12'],
-    ndvi: [0.412, 0.528, 0.487, 0.613, 0.554],
-    count: 5,
-  },
-  report: {
-    trend: 'stable',
-    en: {
-      summary: 'Canopy vigor is stable across the past 30 days of Sentinel-2 scenes. NDVI stays in the healthy range with no upward or downward drift.',
-      advice: [
-        'Maintain routine irrigation and fertilization — no urgent action needed.',
-        'Do a regular pest and disease walk-through every 1–2 weeks.',
-        'Watch the next few satellite passes for any sign of decline after rain.',
-      ],
-      source: 'demo',
-      trend: 'stable',
-    },
-    zh: {
-      summary: '过去 30 天 Sentinel-2 影像显示果树长势平稳，NDVI 保持在健康区间，未见明显上升或下降趋势。',
-      advice: [
-        '按常规水肥管理即可，暂无紧急事项。',
-        '每 1–2 周例行巡查一次病虫害。',
-        '关注雨后后续卫星影像，警惕由稳转弱。',
-      ],
-      source: 'demo',
-      trend: 'stable',
-    },
-  },
-}
 
 const rep = computed(() => {
   const r = lastReport.value?.report
@@ -98,6 +63,22 @@ function renderChart() {
   })
 }
 
+function loadDemo() {
+  isDemo.value = true
+  lastReport.value = { ndvi: SAMPLE_NDVI, report: SAMPLE_REPORT, crop: 'pomelo' }
+  statusMsg.value = ''
+  statusKind.value = 'info'
+  emit('load-demo')
+}
+
+function clearAll() {
+  isDemo.value = false
+  lastReport.value = null
+  statusMsg.value = ''
+  statusKind.value = 'info'
+  emit('clear')
+}
+
 async function generate() {
   if (!props.geojson) {
     statusMsg.value = t('needPolygon')
@@ -112,8 +93,6 @@ async function generate() {
   isDemo.value = false
 
   try {
-    // AbortController: 15s timeout so Render cold-start (sleeping free tier)
-    // doesn't hang the UI forever — falls back to demo data gracefully.
     const ctrl = new AbortController()
     const tid = setTimeout(() => ctrl.abort(), 15000)
 
@@ -121,15 +100,11 @@ async function generate() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: ctrl.signal,
-      // lang=both: one call returns EN + ZH so the toggle is instant
       body: JSON.stringify({ geojson: props.geojson, crop: crop.value, lang: 'both' }),
     })
     clearTimeout(tid)
 
-    if (!resp.ok) {
-      // Backend unreachable or non-200 → gracefully fall back to demo data
-      throw new Error(`HTTP ${resp.status}`)
-    }
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
     const data = await resp.json()
     if (data.ndvi && data.ndvi.error) {
@@ -146,22 +121,31 @@ async function generate() {
     lastReport.value = data
     statusMsg.value = ''
   } catch {
-    // Demo mode: show sample data so the UI isn't dead during hackathon demos.
-    lastReport.value = DEMO
-    isDemo.value = true
-    statusMsg.value = ''
-    statusKind.value = 'info'
+    statusMsg.value = t('errNetwork')
+    statusKind.value = 'error'
   } finally {
     loading.value = false
   }
 }
+
+const legendStops = computed(() => LEGEND_STOPS)
 </script>
 
 <template>
   <div class="panel">
+    <!-- Controls: demo field + clear + crop select + generate -->
+    <div class="controls">
+      <button class="btn btn--ghost demo-btn" type="button" @click="loadDemo">
+        {{ t('loadDemo') }}
+      </button>
+      <button class="btn btn--ghost clear-btn" type="button" @click="clearAll" v-if="lastReport">
+        {{ t('clearBtn') }}
+      </button>
+    </div>
+
     <p class="hint">{{ t('drawHint') }}</p>
 
-    <div class="controls">
+    <div class="controls controls-gen">
       <select v-model="crop" class="crop">
         <option value="pomelo">{{ t('cropPomelo') }}</option>
         <option value="citrus">{{ t('cropCitrus') }}</option>
@@ -173,9 +157,32 @@ async function generate() {
 
     <p class="status" :class="{ error: statusKind === 'error' }">
       <span v-if="loading" class="spinner" aria-hidden="true"></span>{{ statusMsg }}
-      <span v-if="isDemo" class="demo-badge">DEMO · 示例数据</span>
+      <span v-if="isDemo" class="demo-badge">{{ t('sampleBadge') }}</span>
     </p>
 
+    <!-- Empty state: 3-step guide + NDVI legend -->
+    <div v-if="!lastReport && !loading" class="empty-state">
+      <div class="steps">
+        <div class="step"><span class="step-num">1</span><span>{{ t('emptyStep1') }}</span></div>
+        <div class="step-arrow" aria-hidden="true">→</div>
+        <div class="step"><span class="step-num">2</span><span>{{ t('emptyStep2') }}</span></div>
+        <div class="step-arrow" aria-hidden="true">→</div>
+        <div class="step"><span class="step-num">3</span><span>{{ t('emptyStep3') }}</span></div>
+      </div>
+
+      <div class="legend">
+        <p class="legend-title">{{ t('ndviLegend') }}</p>
+        <div class="legend-bar">
+          <div class="legend-row" v-for="s in legendStops" :key="s.range">
+            <span class="legend-swatch" :style="{ background: s.color }"></span>
+            <span class="legend-range">{{ s.range }}</span>
+            <span class="legend-label">{{ i18n.lang === 'zh' ? s.labelZh : s.label }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report card -->
     <article v-if="rep" class="card">
       <div class="card-head">
         <h2>{{ t('trendTitle') }}</h2>
@@ -188,12 +195,15 @@ async function generate() {
       </ul>
     </article>
 
+    <!-- NDVI chart -->
     <article v-if="lastReport?.ndvi?.dates?.length" class="card">
       <h2>{{ t('chartTitle') }}</h2>
       <div class="chart-wrap"><canvas ref="canvasRef"></canvas></div>
+      <p v-if="isDemo" class="sample-note">{{ t('sampleNote') }}</p>
     </article>
 
-    <p v-if="lastReport" class="data-note">{{ t('dataNote') }}</p>
+    <p v-if="lastReport && !isDemo" class="data-note">{{ t('dataNote') }}</p>
+    <p v-if="lastReport && isDemo" class="data-note">{{ t('sampleNote') }}</p>
   </div>
 </template>
 
@@ -214,6 +224,32 @@ async function generate() {
   display: flex;
   gap: 10px;
   margin-bottom: 8px;
+}
+
+.controls-gen {
+  margin-bottom: 8px;
+}
+
+.demo-btn, .clear-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.demo-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber-bright);
+}
+
+.clear-btn:hover {
+  border-color: #e08b7d;
+  color: #e08b7d;
 }
 
 .crop {
@@ -256,6 +292,90 @@ async function generate() {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty-state {
+  margin-top: 14px;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--amber-deep);
+  color: var(--amber-bright);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step-arrow {
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.legend {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.legend-title {
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.legend-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.legend-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-range {
+  color: var(--ink-2);
+  font-weight: 600;
+  min-width: 70px;
+}
+
+.legend-label {
+  color: var(--ink-3);
+}
 
 .card {
   background: var(--bg-raised);
@@ -333,15 +453,24 @@ async function generate() {
   vertical-align: middle;
 }
 
+.sample-note {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  font-style: italic;
+}
+
 @media (max-width: 600px) {
   .panel { padding: 14px clamp(12px, 4vw, 20px) 32px; }
-  .controls { flex-direction: column; }
-  .crop, .gen { width: 100%; flex: none; }
+  .controls, .controls-gen { flex-direction: column; }
+  .crop, .gen, .demo-btn, .clear-btn { width: 100%; flex: none; }
   .card { padding: 14px; }
   .chart-wrap { height: 200px; }
   .summary { font-size: 14px; line-height: 1.65; }
   .advice { font-size: 13.5px; }
   .card-head h2 { font-size: 14px; }
   .hint { font-size: 12.5px; }
+  .steps { flex-direction: column; align-items: flex-start; }
+  .step-arrow { display: none; }
 }
 </style>
