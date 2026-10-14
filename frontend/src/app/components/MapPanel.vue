@@ -68,5 +68,24 @@ onBeforeUnmount(() => map?.remove())
 
 :deep(.leaflet-container) {
   font-family: var(--font-sans);
+  touch-action: none;
+}
+
+/* Mobile: enlarge draw toolbar touch targets (44px min) */
+@media (max-width: 600px) {
+  :deep(.leaflet-draw-toolbar a) {
+    width: 44px;
+    height: 44px;
+    background-size: 22px 22px;
+  }
+  :deep(.leaflet-bar) {
+    border-radius: 6px;
+  }
+  :deep(.leaflet-control-zoom a) {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+    font-size: 18px;
+  }
 }
 </style>
