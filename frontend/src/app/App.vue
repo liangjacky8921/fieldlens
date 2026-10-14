@@ -7,16 +7,26 @@ import { SAMPLE_FIELD } from '../data/references'
 
 const t = useT()
 const geojson = ref<object | null>(null)
+const latestNdvi = ref<number | null>(null)
 const mapRef = ref<InstanceType<typeof MapPanel> | null>(null)
+const reportRef = ref<InstanceType<typeof ReportPanel> | null>(null)
 
-function loadDemoField() {
+function onDemo() {
   geojson.value = SAMPLE_FIELD.polygon
   mapRef.value?.loadDemoPolygon(SAMPLE_FIELD.polygon)
+  reportRef.value?.loadDemo()
 }
 
-function clearField() {
+function onClear() {
   geojson.value = null
+  latestNdvi.value = null
   mapRef.value?.clearAll()
+  reportRef.value?.clearAll()
+}
+
+function onReport(data: any) {
+  const arr = data?.ndvi?.ndvi
+  latestNdvi.value = arr?.length ? arr[arr.length - 1] : null
 }
 </script>
 
@@ -32,9 +42,23 @@ function clearField() {
     </div>
   </header>
 
-  <main>
-    <MapPanel ref="mapRef" @geojson="(g: object | null) => (geojson = g)" />
-    <ReportPanel :geojson="geojson" @load-demo="loadDemoField" @clear="clearField" />
+  <main class="tool-main">
+    <div class="map-col">
+      <MapPanel
+        ref="mapRef"
+        :ndvi-level="latestNdvi"
+        @geojson="(g: object | null) => (geojson = g)"
+        @demo="onDemo"
+        @clear="onClear"
+      />
+    </div>
+    <div class="report-col">
+      <ReportPanel
+        ref="reportRef"
+        :geojson="geojson"
+        @report="onReport"
+      />
+    </div>
   </main>
 
   <footer class="foot">{{ t('toolFooter') }}</footer>
@@ -50,7 +74,7 @@ function clearField() {
 }
 
 .topbar-inner {
-  max-width: 1180px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 clamp(16px, 4vw, 32px);
   height: 58px;
@@ -99,12 +123,48 @@ function clearField() {
   white-space: nowrap;
 }
 
+/* Split-screen: map left (58%), report right (42%) */
+.tool-main {
+  display: grid;
+  grid-template-columns: 58% 42%;
+  min-height: calc(100vh - 58px - 62px);
+}
+
+.map-col {
+  position: sticky;
+  top: 58px;
+  height: calc(100vh - 58px);
+  overflow: hidden;
+}
+
+.report-col {
+  height: calc(100vh - 58px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .foot {
   text-align: center;
   font-size: 11px;
   color: var(--ink-3);
   padding: 18px 0 28px;
   border-top: 1px solid var(--line);
+}
+
+/* Mobile: stacked layout */
+@media (max-width: 1023px) {
+  .tool-main {
+    grid-template-columns: 1fr;
+  }
+  .map-col {
+    position: relative;
+    top: 0;
+    height: auto;
+  }
+  .report-col {
+    height: auto;
+    overflow-y: visible;
+  }
 }
 
 @media (max-width: 480px) {

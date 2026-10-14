@@ -25,6 +25,29 @@ CROPS = {
     "citrus": {"en": "citrus", "zh": "柑橘"},
 }
 
+# --- Seasonal context by month (extensible) ---
+SEASON_CONFIG = {
+    10: {
+        "en": "October is post-harvest recovery for Meizhou pomelo; a mild seasonal dip is normal — watch whether NDVI falls below this plot's own historical level for the season.",
+        "zh": "10 月为采后恢复期，NDVI 季节性回落属正常，重点看是否跌破本块地历史同期水平。",
+    },
+}
+
+
+def _get_season_note(dates, lang):
+    """Return seasonal context string for the last date's month, or empty string."""
+    if not dates:
+        return ""
+    try:
+        last = str(dates[-1])[:10]
+        month = int(last[5:7])
+        entry = SEASON_CONFIG.get(month)
+        if entry:
+            return entry.get(lang, "")
+    except (ValueError, IndexError):
+        pass
+    return ""
+
 # --- Verified thresholds (from references.js / published sources) ---
 VEGETATION_THRESHOLD = 0.25  # R5: NDVI > 0.25 = vegetation (soot-mould paper)
 HIGH_VIGOR_UAV = 0.70       # R3: UAV canopy-pixel reference (NOT S2 plot-mean)
@@ -59,7 +82,7 @@ PROMPTS = {
         f"{SENTINEL2_CAVEAT} {POST_HARVEST} {TREND_RULES} {RED_LINES}\n"
         "First line: verdict — one of vigorous / watch / alert.\n"
         "Then one summary sentence.\n"
-        "Then up to 3 actions, each with a time window, using 'may/suggest field check' language.\n"
+        "Then up to 3 actions; each MUST include a time window (e.g. 'within 7 days', 'before the next pass in ~5 days'); use 'may/suggest field check' language.\n"
         "Plain English for growers, no jargon, under 200 words."
     ),
     "zh": (
@@ -70,7 +93,7 @@ PROMPTS = {
         "斑块状低值和整园均匀下降要区分——下地走一圈。"
         "红线：不诊断具体病虫害，不开农药用量，建议咨询当地农技站。\n"
         "第一行给结论（vigorous/watch/alert 对应 旺盛/关注/告警）。\n"
-        "然后一句总结，再列最多 3 条行动，每条带时间窗，用'可能/建议实地核查'的措辞。"
+        "然后一句总结，再列最多 3 条行动，每条必须带时间窗（如'7 天内''下次晴朗过境约 5 天后复查'），用'可能/建议实地核查'的措辞。"
         "果农大白话，少用术语，200 字以内。"
     ),
 }
@@ -207,11 +230,11 @@ FALLBACK = {
     "vigorous": {
         "en": {
             "verdict": "vigorous",
-            "summary": "Canopy vigor is healthy and stable. NDVI shows no concerning decline over the period.",
+            "summary": "Canopy vigor is healthy and stable. NDVI shows no concerning decline.",
             "advice": [
                 "Maintain current irrigation and fertilization; no urgent action needed this week.",
                 "Do a routine pest and disease walk-through within the next 1–2 weeks.",
-                "Watch the next satellite pass (5 days) for any sign of decline.",
+                "Watch the next satellite pass (about 5 days) for any sign of decline.",
             ],
         },
         "zh": {
@@ -220,27 +243,27 @@ FALLBACK = {
             "advice": [
                 "本周按常规水肥管理即可，暂无紧急事项。",
                 "1–2 周内例行巡查一次病虫害。",
-                "留意下一次卫星影像（5 天后），警惕由稳转弱。",
+                "留意下一次卫星影像（约 5 天后），警惕由稳转弱。",
             ],
         },
     },
     "watch": {
         "en": {
             "verdict": "watch",
-            "summary": "Canopy vigor shows some signs of stress. NDVI is declining or fluctuating — worth a closer look.",
+            "summary": "Canopy vigor shows some signs of stress. NDVI is declining or fluctuating.",
             "advice": [
                 "Check soil moisture within 7 days; increase irrigation if topsoil is dry.",
-                "Inspect leaves for yellowing, spots, or curling — rule out water stress first.",
-                "Review recent water/fertilizer records for missed applications.",
+                "Inspect leaves for yellowing, spots, or curling within 7 days — rule out water stress first.",
+                "Review water/fertilizer records within 7 days for any missed applications this month.",
             ],
         },
         "zh": {
             "verdict": "watch",
-            "summary": "长势有些走弱迹象，NDVI 在下降或波动——值得留意。",
+            "summary": "长势有些走弱迹象，NDVI 在下降或波动。",
             "advice": [
                 "7 天内检查土壤墒情，表层干了就及时补水。",
-                "查看叶片有无发黄、斑点、卷叶，先排查是否缺水。",
-                "翻一下最近的水肥记录，有没有漏施。",
+                "7 天内查看叶片有无发黄、斑点、卷叶，先排查是否缺水。",
+                "7 天内核查本月水肥记录，有没有漏施。",
             ],
         },
     },
@@ -250,8 +273,8 @@ FALLBACK = {
             "summary": "Canopy vigor dropped sharply. NDVI shows a sudden decline — immediate field check recommended.",
             "advice": [
                 "Walk the plot within 7 days; compare weak spots with healthy areas side by side.",
-                "Check irrigation system coverage — dry corners or blocked emitters may be the cause.",
-                "If water and nutrition check out, consult the local agricultural extension for diagnosis.",
+                "Check irrigation system coverage within 7 days — dry corners or blocked emitters may be the cause.",
+                "If water and nutrition check out, consult the local agricultural extension within 2 weeks for diagnosis.",
             ],
         },
         "zh": {
@@ -259,8 +282,8 @@ FALLBACK = {
             "summary": "长势明显走弱，NDVI 突降——建议尽快下地查看。",
             "advice": [
                 "7 天内下地走一圈，对比长势弱和好的地方。",
-                "检查灌溉有没有死角——边角干、滴头堵都可能导致局部差。",
-                "水肥查不出问题，就找当地农技站帮忙看看。",
+                "7 天内检查灌溉有没有死角——边角干、滴头堵都可能导致局部差。",
+                "水肥查不出问题，2 周内找当地农技站帮忙看看。",
             ],
         },
     },
@@ -372,6 +395,7 @@ def generate_report(ndvi_data: dict, crop: str = "pomelo", lang: str = "en") -> 
 
     features = compute_features(ndvi_data)
     gap_note = features["gap_note"]
+    season_note = _get_season_note(ndvi_data.get("dates", []), lang)
 
     # Try the local Gemma model first
     if features["cleaned_ndvi"]:
@@ -388,6 +412,7 @@ def generate_report(ndvi_data: dict, crop: str = "pomelo", lang: str = "en") -> 
                     "trend": features["trend"],
                     "source": "model",
                     "gap_note": gap_note,
+                    "season_note": season_note,
                 }
         except Exception:  # noqa: BLE001 - any Ollama failure → fallback
             pass
@@ -401,6 +426,7 @@ def generate_report(ndvi_data: dict, crop: str = "pomelo", lang: str = "en") -> 
         "trend": features["trend"],
         "source": "fallback",
         "gap_note": gap_note,
+        "season_note": season_note,
     }
 
 
@@ -410,6 +436,10 @@ def generate_bilingual(ndvi_data: dict, crop: str = "pomelo") -> dict:
     gap_note = features["gap_note"]
     trend = features["trend"]
     verdict = features["verdict"]
+    season_notes = {
+        "en": _get_season_note(ndvi_data.get("dates", []), "en"),
+        "zh": _get_season_note(ndvi_data.get("dates", []), "zh"),
+    }
 
     reports = {}
     for lang in ("en", "zh"):
@@ -426,6 +456,7 @@ def generate_bilingual(ndvi_data: dict, crop: str = "pomelo") -> dict:
                         "trend": trend,
                         "source": "model",
                         "gap_note": gap_note,
+                        "season_note": season_notes[lang],
                     }
                     continue
             except Exception:  # noqa: BLE001
@@ -439,6 +470,7 @@ def generate_bilingual(ndvi_data: dict, crop: str = "pomelo") -> dict:
             "trend": trend,
             "source": "fallback",
             "gap_note": gap_note,
+            "season_note": season_notes[lang],
         }
 
     return {"trend": trend, "verdict": verdict, "en": reports["en"], "zh": reports["zh"]}
