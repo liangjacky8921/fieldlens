@@ -42,6 +42,7 @@ const DICT = {
     errNetwork: 'Network error. Is the backend running?',
     noData: 'No usable satellite scenes for this plot (clouds or coverage). Try a larger area.',
     trend: { rising: 'Rising', stable: 'Stable', declining: 'Declining', volatile: 'Variable' },
+    verdict: { vigorous: 'Vigorous', watch: 'Watch', alert: 'Alert' },
     langBtn: '中文',
     dataNote: 'Source: Copernicus Sentinel-2 via Google Earth Engine (real query). Advisory: local LLM or rule fallback.',
     // Demo field & empty state
@@ -128,6 +129,7 @@ const DICT = {
     errNetwork: '网络错误，请确认后端已启动。',
     noData: '该地块近期无可用卫星影像（云层遮挡或覆盖不足），试试画大一点。',
     trend: { rising: '上升', stable: '平稳', declining: '下降', volatile: '波动' },
+    verdict: { vigorous: '旺盛', watch: '关注', alert: '告警' },
     langBtn: 'EN',
     dataNote: '数据来源：Google Earth Engine 的 Copernicus Sentinel-2（真实查询）。建议生成：本地大模型或规则兜底。',
     // Demo field & empty state

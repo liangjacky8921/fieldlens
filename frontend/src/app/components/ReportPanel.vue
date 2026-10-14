@@ -31,6 +31,8 @@ const rep = computed(() => {
 })
 
 const trendKey = computed(() => lastReport.value?.report?.trend ?? rep.value?.trend ?? 'stable')
+const verdictKey = computed(() => rep.value?.verdict ?? 'watch')
+const gapNote = computed(() => rep.value?.gap_note ?? '')
 
 watch([rep, trendKey, () => lastReport.value?.ndvi], renderChart, { deep: false })
 
@@ -203,8 +205,12 @@ const legendStops = computed(() => LEGEND_STOPS)
     <article v-if="rep" class="card">
       <div class="card-head">
         <h2>{{ t('trendTitle') }}</h2>
-        <span class="badge" :class="trendKey">{{ t('trend')[trendKey] || trendKey }}</span>
+        <div class="badges">
+          <span class="badge" :class="verdictKey">{{ t('verdict')[verdictKey] || verdictKey }}</span>
+          <span class="badge badge--sub" :class="trendKey">{{ t('trend')[trendKey] || trendKey }}</span>
+        </div>
       </div>
+      <p v-if="gapNote" class="gap-note">{{ gapNote }}</p>
       <p class="summary">{{ rep.summary }}</p>
       <h2 class="advice-title">{{ t('adviceTitle') }}</h2>
       <ul class="advice">
@@ -415,6 +421,12 @@ const legendStops = computed(() => LEGEND_STOPS)
   margin-bottom: 10px;
 }
 
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .badge {
   padding: 4px 12px;
   border-radius: 999px;
@@ -423,10 +435,30 @@ const legendStops = computed(() => LEGEND_STOPS)
   color: #100e0a;
 }
 
+.badge--sub {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.badge.vigorous { background: var(--green); }
+.badge.watch { background: var(--amber-bright); }
+.badge.alert { background: var(--red); color: #fff; }
+
 .badge.rising { background: var(--amber-bright); }
 .badge.stable { background: var(--blue); }
-.badge.declining { background: var(--red); }
+.badge.declining { background: var(--red); color: #fff; }
 .badge.volatile { background: #a39472; }
+
+.gap-note {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-style: italic;
+  margin: 6px 0 8px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--line-strong);
+  background: var(--bg-panel);
+  border-radius: 0 4px 4px 0;
+}
 
 .summary {
   margin-top: 6px;

@@ -121,7 +121,9 @@ export const SAMPLE_NDVI = {
 // --- Sample report (illustrative, based on sample NDVI above) ---
 export const SAMPLE_REPORT = {
   trend: 'stable',
+  verdict: 'vigorous',
   en: {
+    verdict: 'vigorous',
     summary:
       'Canopy vigor is good overall (mean NDVI 0.69, high-vigor fraction 62%). A mid-season dip to 0.57 around day 35–40 suggests temporary water or nutrient stress, followed by full recovery.',
     advice: [
@@ -131,8 +133,10 @@ export const SAMPLE_REPORT = {
     ],
     source: 'sample',
     trend: 'stable',
+    gap_note: '',
   },
   zh: {
+    verdict: 'vigorous',
     summary:
       '整体冠层长势良好（均值 NDVI 0.69，高活力比例 62%）。第 35–40 天左右出现一次降至 0.57 的中期胁迫，随后完全恢复。',
     advice: [
@@ -142,6 +146,7 @@ export const SAMPLE_REPORT = {
     ],
     source: 'sample',
     trend: 'stable',
+    gap_note: '',
   },
 }
 
