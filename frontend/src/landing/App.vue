@@ -12,6 +12,9 @@ import { i18n, toggleLang, useT } from '../i18n'
 
 const t = useT()
 
+// Respects Vite base so links work on Vercel (/static/) and EdgeOne (/) builds
+const appHref = import.meta.env.BASE_URL + 'app.html'
+
 const navEl = ref<HTMLElement | null>(null)
 const { y } = useScroll(window)
 const scrolled = ref(false)
@@ -29,7 +32,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
         <a class="nav-link" href="#orchard">{{ t('navOrchard') }}</a>
         <a class="nav-link" href="#how">{{ t('navHow') }}</a>
         <button class="lang-btn" type="button" @click="toggleLang">{{ t('langBtn') }}</button>
-        <a class="btn btn--small" href="/static/app.html">{{ t('navTool') }}</a>
+        <a class="btn btn--small" :href="appHref">{{ t('navTool') }}</a>
       </div>
     </div>
   </nav>
@@ -143,12 +146,14 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 
 .footer {
   border-top: 1px solid var(--line);
+  background: var(--bg);
 }
 
 .footer-waves {
   height: 170px;
   border-bottom: 1px solid var(--line);
   overflow: hidden;
+  background: var(--bg); /* fallback when WebGL canvas fails on some mobile kernels */
 }
 
 .footer-inner {

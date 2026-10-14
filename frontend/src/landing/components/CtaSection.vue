@@ -5,6 +5,8 @@ import { useT } from '../../i18n'
 
 const t = useT()
 const reduced = usePreferredReducedMotion()
+// Respects Vite base so links work on Vercel (/static/) and EdgeOne (/) builds
+const appHref = import.meta.env.BASE_URL + 'app.html'
 </script>
 
 <template>
@@ -25,7 +27,7 @@ const reduced = usePreferredReducedMotion()
     <div class="shell cta-inner">
       <p class="kicker">{{ t('ctaKicker') }}</p>
       <h2 class="cta-title">{{ t('ctaTitle') }}</h2>
-      <a class="btn btn--primary" href="/static/app.html">{{ t('ctaBtn') }}</a>
+      <a class="btn btn--primary" :href="appHref">{{ t('ctaBtn') }}</a>
     </div>
   </section>
 </template>

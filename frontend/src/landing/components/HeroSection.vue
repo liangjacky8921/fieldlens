@@ -9,6 +9,8 @@ const t = useT()
 const reduced = usePreferredReducedMotion()
 const showAurora = computed(() => reduced.value !== 'reduce')
 const splitType = computed(() => (i18n.lang === 'zh' ? 'chars' : 'words'))
+// Respects Vite base so links work on Vercel (/static/) and EdgeOne (/) builds
+const appHref = import.meta.env.BASE_URL + 'app.html'
 </script>
 
 <template>
@@ -49,7 +51,7 @@ const splitType = computed(() => (i18n.lang === 'zh' ? 'chars' : 'words'))
         />
         <p class="hero-sub">{{ t('heroSub') }}</p>
         <div class="hero-ctas">
-          <a class="btn btn--primary" href="/static/app.html">{{ t('heroCta') }}</a>
+          <a class="btn btn--primary" :href="appHref">{{ t('heroCta') }}</a>
           <a class="btn btn--ghost" href="#how">{{ t('heroCta2') }}</a>
         </div>
         <ul class="hero-facts">
