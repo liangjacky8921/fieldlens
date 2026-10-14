@@ -79,6 +79,26 @@ function clearAll() {
   emit('clear')
 }
 
+// Render free-tier cold start takes 30-60s; GEE query ~2-5s.
+// 120s covers both with margin; auto-retry once on failure.
+async function callReport(geojson: object, crop: string): Promise<Response> {
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), 120000)
+  try {
+    const resp = await fetch(`${API_BASE}/api/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
+      body: JSON.stringify({ geojson, crop, lang: 'both' }),
+    })
+    clearTimeout(tid)
+    return resp
+  } catch (err) {
+    clearTimeout(tid)
+    throw err
+  }
+}
+
 async function generate() {
   if (!props.geojson) {
     statusMsg.value = t('needPolygon')
@@ -93,16 +113,13 @@ async function generate() {
   isDemo.value = false
 
   try {
-    const ctrl = new AbortController()
-    const tid = setTimeout(() => ctrl.abort(), 15000)
+    let resp = await callReport(props.geojson, crop.value)
 
-    const resp = await fetch(`${API_BASE}/api/report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: ctrl.signal,
-      body: JSON.stringify({ geojson: props.geojson, crop: crop.value, lang: 'both' }),
-    })
-    clearTimeout(tid)
+    // Auto-retry once on network failure (Render cold-start may drop first request)
+    if (!resp.ok && resp.status >= 500) {
+      statusMsg.value = t('retrying')
+      resp = await callReport(props.geojson, crop.value)
+    }
 
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
