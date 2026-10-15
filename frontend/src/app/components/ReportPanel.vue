@@ -2,8 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { Chart, CategoryScale, Filler, Legend, LineController, LineElement, LinearScale, PointElement, Tooltip } from 'chart.js'
 import { i18n, useT } from '../../i18n'
-import { SAMPLE_NDVI } from '../../data/references'
-import { generateDemoReport } from '../../data/analyze'
 
 const props = defineProps<{ geojson: object | null }>()
 const emit = defineEmits<{ (e: 'report', data: any): void }>()
@@ -22,7 +20,6 @@ const loadingStep = ref(0)
 const statusMsg = ref('')
 const statusKind = ref<'info' | 'error'>('info')
 const lastReport = ref<any>(null)
-const isDemo = ref(false)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 let stepTimer: ReturnType<typeof setInterval> | null = null
@@ -36,7 +33,7 @@ const rep = computed(() => {
 const trendKey = computed(() => lastReport.value?.report?.trend ?? rep.value?.trend ?? 'stable')
 const verdictKey = computed(() => rep.value?.verdict ?? 'watch')
 const gapNote = computed(() => rep.value?.gap_note ?? '')
-const engineKey = computed(() => rep.value?.source ?? (isDemo.value ? 'sample' : 'fallback'))
+const engineKey = computed(() => rep.value?.source ?? 'fallback')
 
 // --- KPI summary row computed values ---
 const ndviValues = computed(() => lastReport.value?.ndvi?.ndvi ?? [])
@@ -181,17 +178,56 @@ function renderChart() {
   })
 }
 
-function loadDemo() {
-  isDemo.value = true
-  const report = generateDemoReport(SAMPLE_NDVI, 'pomelo')
-  lastReport.value = { ndvi: SAMPLE_NDVI, report, crop: 'pomelo' }
-  statusMsg.value = ''
+// Single analysis entry point: "Load demo field" auto-render and "Generate
+// Report" both POST the real polygon to the same backend pipeline — same
+// request, same response, same render exit. No client-side verdict source.
+async function runAnalysis(polygon: object, selectedCrop: string) {
+  loading.value = true
+  statusMsg.value = t('generating')
   statusKind.value = 'info'
-  emit('report', lastReport.value)
+  lastReport.value = null
+
+  try {
+    let resp = await callReport(polygon, selectedCrop)
+
+    // Auto-retry once on network failure (Render cold-start may drop first request)
+    if (!resp.ok && resp.status >= 500) {
+      statusMsg.value = t('retrying')
+      resp = await callReport(polygon, selectedCrop)
+    }
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+
+    const data = await resp.json()
+    if (data.ndvi && data.ndvi.error) {
+      statusMsg.value = /GEE/i.test(data.ndvi.error) ? t('errGee') : t('noData')
+      statusKind.value = 'error'
+      return
+    }
+    if (!data.report) {
+      statusMsg.value = t('errGeneric')
+      statusKind.value = 'error'
+      return
+    }
+
+    lastReport.value = data
+    statusMsg.value = ''
+    emit('report', data)
+  } catch {
+    statusMsg.value = t('errNetwork')
+    statusKind.value = 'error'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Demo auto-render: real GEE query for the demo polygon through the same pipeline.
+function loadDemo(polygon: object) {
+  crop.value = 'pomelo'
+  return runAnalysis(polygon, 'pomelo')
 }
 
 function clearAll() {
-  isDemo.value = false
   lastReport.value = null
   statusMsg.value = ''
   statusKind.value = 'info'
@@ -224,45 +260,7 @@ async function generate() {
     statusKind.value = 'error'
     return
   }
-
-  loading.value = true
-  statusMsg.value = t('generating')
-  statusKind.value = 'info'
-  lastReport.value = null
-  isDemo.value = false
-
-  try {
-    let resp = await callReport(props.geojson, crop.value)
-
-    // Auto-retry once on network failure (Render cold-start may drop first request)
-    if (!resp.ok && resp.status >= 500) {
-      statusMsg.value = t('retrying')
-      resp = await callReport(props.geojson, crop.value)
-    }
-
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-
-    const data = await resp.json()
-    if (data.ndvi && data.ndvi.error) {
-      statusMsg.value = /GEE/i.test(data.ndvi.error) ? t('errGee') : t('noData')
-      statusKind.value = 'error'
-      return
-    }
-    if (!data.report) {
-      statusMsg.value = t('errGeneric')
-      statusKind.value = 'error'
-      return
-    }
-
-    lastReport.value = data
-    statusMsg.value = ''
-    emit('report', data)
-  } catch {
-    statusMsg.value = t('errNetwork')
-    statusKind.value = 'error'
-  } finally {
-    loading.value = false
-  }
+  return runAnalysis(props.geojson, crop.value)
 }
 
 defineExpose({ loadDemo, clearAll })
@@ -288,7 +286,6 @@ defineExpose({ loadDemo, clearAll })
       <span v-if="loading" class="spinner" aria-hidden="true"></span>
       <span v-if="loading" class="loading-text">{{ loadingText }}</span>
       <template v-else>{{ statusMsg }}</template>
-      <span v-if="isDemo" class="demo-badge">{{ t('sampleBadge') }}</span>
     </p>
 
     <!-- Loading skeleton with breathing animation -->
@@ -355,11 +352,9 @@ defineExpose({ loadDemo, clearAll })
     <article v-if="lastReport?.ndvi?.dates?.length" class="card">
       <h2>{{ t('chartTitle') }}</h2>
       <div class="chart-wrap"><canvas ref="canvasRef"></canvas></div>
-      <p v-if="isDemo" class="sample-note">{{ t('sampleNote') }}</p>
     </article>
 
-    <p v-if="lastReport && !isDemo" class="data-note">{{ t('engineLong')[engineKey] || '' }}</p>
-    <p v-if="lastReport && isDemo" class="data-note">{{ t('sampleNote') }}</p>
+    <p v-if="lastReport" class="data-note">{{ t('engineLong')[engineKey] || '' }}</p>
   </div>
 </template>
 
@@ -633,7 +628,6 @@ defineExpose({ loadDemo, clearAll })
 
 .engine-tag.model { background: rgba(127, 163, 136, 0.25); color: var(--green); }
 .engine-tag.fallback { background: var(--bg-panel); color: var(--ink-3); }
-.engine-tag.sample { background: var(--amber-deep); color: var(--amber-bright); }
 
 .gap-note {
   font-size: 12px;
@@ -684,25 +678,6 @@ defineExpose({ loadDemo, clearAll })
   margin-top: 14px;
   font-size: 11.5px;
   color: var(--ink-3);
-}
-
-.demo-badge {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 3px;
-  background: var(--amber-deep);
-  color: var(--amber-bright);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  vertical-align: middle;
-}
-
-.sample-note {
-  margin-top: 8px;
-  font-size: 11.5px;
-  color: var(--ink-3);
-  font-style: italic;
 }
 
 @media (max-width: 1023px) {

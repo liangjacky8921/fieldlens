@@ -99,57 +99,6 @@ export const SAMPLE_FIELD = {
   note: 'Illustrative polygon within the Dapu pomelo GI protection area — not a real farm boundary',
 }
 
-// --- Sample NDVI series (illustrative, within R4 published ranges) ---
-// 18 points, ~5-day intervals over 90 days; includes mid-season stress dip + recovery
-export const SAMPLE_NDVI = {
-  dates: [
-    '2026-07-15', '2026-07-20', '2026-07-25', '2026-07-30',
-    '2026-08-04', '2026-08-09', '2026-08-14', '2026-08-19',
-    '2026-08-24', '2026-08-29', '2026-09-03', '2026-09-08',
-    '2026-09-13', '2026-09-18', '2026-09-23', '2026-09-28',
-    '2026-10-03', '2026-10-08',
-  ],
-  ndvi: [
-    0.72, 0.73, 0.71, 0.74, 0.70, 0.66,
-    0.60, 0.57, 0.58, 0.62, 0.66, 0.70,
-    0.72, 0.74, 0.73, 0.75, 0.74, 0.76,
-  ],
-  count: 18,
-  note: 'Illustrative NDVI series — values within published citrus ranges (R4), not measured data',
-}
-
-// --- Sample report (illustrative, based on sample NDVI above) ---
-export const SAMPLE_REPORT = {
-  trend: 'stable',
-  verdict: 'vigorous',
-  en: {
-    verdict: 'vigorous',
-    summary:
-      'Canopy vigor is good overall (mean NDVI 0.69, high-vigor fraction 62%). A mid-season dip to 0.57 around day 35–40 suggests temporary water or nutrient stress, followed by full recovery.',
-    advice: [
-      'Check irrigation and drainage in the southeast corner where the dip was deepest.',
-      'Scout for pests on lower canopy after the rain.',
-      'Next pass in 5 days; no urgent action needed.',
-    ],
-    source: 'sample',
-    trend: 'stable',
-    gap_note: '',
-  },
-  zh: {
-    verdict: 'vigorous',
-    summary:
-      '整体冠层长势良好（均值 NDVI 0.69，高活力比例 62%）。第 35–40 天左右出现一次降至 0.57 的中期胁迫，随后完全恢复。',
-    advice: [
-      '检查东南角排水与灌溉——该区域下降最深。',
-      '雨后巡查下层树冠病虫害。',
-      '5 天后关注下一次卫星过境，暂无紧急事项。',
-    ],
-    source: 'sample',
-    trend: 'stable',
-    gap_note: '',
-  },
-}
-
 // --- Data source list (for landing page "Data sources" section) ---
 export const DATA_SOURCES = [
   {

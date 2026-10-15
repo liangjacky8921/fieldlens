@@ -31,6 +31,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
       <div class="nav-links">
         <a class="nav-link" href="#orchard">{{ t('navOrchard') }}</a>
         <a class="nav-link" href="#how">{{ t('navHow') }}</a>
+        <a class="nav-gh" href="https://github.com/liangjacky8921/fieldlens" target="_blank" rel="noopener" aria-label="FieldLens GitHub repository">GitHub ↗</a>
         <button class="lang-btn" type="button" @click="toggleLang">{{ t('langBtn') }}</button>
         <a class="btn btn--small" :href="appHref">{{ t('navTool') }}</a>
       </div>
@@ -132,6 +133,20 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 
 .nav-link:hover { color: var(--ink); }
 
+.nav-gh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  white-space: nowrap;
+  padding: 6px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+
+.nav-gh:hover { color: var(--amber-bright, #e8bc66); border-color: var(--amber); }
+
 .lang-btn {
   background: transparent;
   border: 1px solid var(--line-strong);
@@ -209,6 +224,7 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   .brand-mark { width: 8px; height: 8px; }
   .nav-links { gap: 10px; }
   .nav-link { font-size: 13px; }
+  .nav-gh { min-height: 44px; padding: 0 13px; font-size: 13px; }
   .lang-btn { padding: 5px 10px; font-size: 12px; }
   .btn--small { padding: 9px 14px; font-size: 13px; }
   .footer-inner { flex-direction: column; align-items: flex-start; gap: 8px; }

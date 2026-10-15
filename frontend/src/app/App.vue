@@ -14,7 +14,8 @@ const reportRef = ref<InstanceType<typeof ReportPanel> | null>(null)
 function onDemo() {
   geojson.value = SAMPLE_FIELD.polygon
   mapRef.value?.loadDemoPolygon(SAMPLE_FIELD.polygon)
-  reportRef.value?.loadDemo()
+  // Real GEE analysis for the demo polygon, via the same pipeline as Generate Report.
+  reportRef.value?.loadDemo(SAMPLE_FIELD.polygon)
 }
 
 function onClear() {
