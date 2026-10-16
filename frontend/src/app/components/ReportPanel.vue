@@ -60,7 +60,7 @@ const latestHealthClass = computed(() => {
   return 'low'
 })
 
-watch([rep, trendKey, () => lastReport.value?.ndvi], renderChart, { deep: false })
+watch([rep, trendKey, () => lastReport.value?.ndvi], renderChart, { deep: false, flush: 'post' })
 
 // Loading step animation: cycle through messages every 4s
 watch(loading, (isLoading) => {

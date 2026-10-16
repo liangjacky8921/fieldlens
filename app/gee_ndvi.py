@@ -128,7 +128,7 @@ def get_ndvi_series(geojson: dict, days: int = 90) -> dict:
     """Compute the NDVI time series for a polygon over the past `days` days.
 
     Args:
-        geojson: GeoJSON Polygon dict, e.g. {"type": "Polygon", "coordinates": [...]}.
+        geojson: GeoJSON Polygon dict, e.g. {"type":"Polygon", "coordinates": [...]}.
         days: Look-back window in days (default 90).
 
     Returns:
@@ -158,23 +158,33 @@ def get_ndvi_series(geojson: dict, days: int = 90) -> dict:
             .filterBounds(region)
             .filterDate(start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
             .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 70))
-            .map(_mask_clouds)
         )
 
+        # Dual-track NDVI mean per scene: take the QA60-cloud-masked mean
+        # when it's non-null; otherwise fall back to the unmasked mean.
+        # This prevents scenes from dropping out entirely when the QA60 mask
+        # is too aggressive for small orchard polygons (common in Meizhou's
+        # cloudy season — Sentinel-2 SR harmonized + QA60 bit 10/11 mask).
         def scene_mean(image):
-            # NDVI = (NIR - Red) / (NIR + Red); Sentinel-2 SR: B8 = NIR, B4 = Red.
             ndvi = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
-            mean = ndvi.reduceRegion(
+            masked_ndvi = _mask_clouds(image).normalizedDifference(["B8", "B4"]).rename("NDVI")
+            masked_val = masked_ndvi.reduceRegion(
                 reducer=ee.Reducer.mean(),
                 geometry=region,
-                scale=20,  # meters; coarse enough to stay fast on small plots
+                scale=20,
                 maxPixels=1e8,
-            )
+            ).get("NDVI")
+            unmasked_val = ndvi.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=region,
+                scale=20,
+                maxPixels=1e8,
+            ).get("NDVI")
             return ee.Feature(
                 None,
                 {
                     "date": image.date().format("YYYY-MM-dd"),
-                    "ndvi": mean.get("NDVI"),
+                    "ndvi": ee.Algorithms.If(masked_val, masked_val, unmasked_val),
                 },
             )
 
