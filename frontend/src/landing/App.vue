@@ -96,7 +96,8 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
   justify-content: space-between;
   height: 64px;
   min-width: 0;
-  overflow: hidden;
+  /* No overflow:hidden here — clipping silently truncates the last item
+     ("Open the tool" → "Open the too") when fonts render wider than expected. */
 }
 
 .brand {
@@ -120,9 +121,9 @@ watch(y, (v) => { scrolled.value = v > 24 }, { immediate: true })
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 22px;
+  /* Shrinkable gap: tightens before anything gets clipped on narrower viewports */
+  gap: clamp(12px, 1.7vw, 22px);
   min-width: 0;
-  overflow: hidden;
 }
 
 .nav-link {

@@ -16,6 +16,9 @@ const emit = defineEmits<{
 const t = useT()
 const el = ref<HTMLDivElement | null>(null)
 const hasPolygon = ref(false)
+// True only while the demo polygon (loaded via "Load demo field") is on the map.
+// Hand-drawn polygons or Clear reset it — badges must never claim user data is sample data.
+const isDemo = ref(false)
 let map: L.Map | null = null
 let drawnItems: L.FeatureGroup | null = null
 
@@ -65,6 +68,7 @@ onMounted(() => {
     drawnItems!.clearLayers()
     drawnItems!.addLayer(e.layer)
     hasPolygon.value = true
+    isDemo.value = false
     emit('geojson', e.layer.toGeoJSON().geometry)
     // Fit bounds so the drawn polygon is centered with padding
     const bounds = e.layer.getBounds()
@@ -96,6 +100,7 @@ function loadDemoPolygon(geojson: object) {
   const layer = L.geoJSON(geojson, { color: '#d4a44e', weight: 2, fillOpacity: 0.15 })
   drawnItems.addLayer(layer)
   hasPolygon.value = true
+  isDemo.value = true
   // Fly to the polygon with comfortable padding
   const bounds = layer.getBounds()
   map.fitBounds(bounds, { padding: [40, 40] })
@@ -106,6 +111,7 @@ function clearAll() {
   if (!drawnItems) return
   drawnItems.clearLayers()
   hasPolygon.value = false
+  isDemo.value = false
   emit('geojson', null)
 }
 
@@ -116,8 +122,9 @@ defineExpose({ loadDemoPolygon, clearAll })
   <div class="map-wrap">
     <div ref="el" class="map"></div>
 
-    <!-- Floating HUD: demo/clear capsule buttons (top-right) -->
+    <!-- Floating HUD: sample badge + demo/clear capsule buttons (top-right) -->
     <div class="hud-actions">
+      <span v-if="isDemo" class="hud-badge">{{ t('sampleBadge') }}</span>
       <button class="hud-btn" type="button" @click="emit('demo')">{{ t('loadDemo') }}</button>
       <button v-if="hasPolygon" class="hud-btn hud-btn--clear" type="button" @click="emit('clear')">{{ t('clearBtn') }}</button>
     </div>
@@ -178,6 +185,24 @@ defineExpose({ loadDemoPolygon, clearAll })
   border-color: var(--amber-bright);
   color: var(--amber-bright);
   background: rgba(16, 14, 10, 0.8);
+}
+
+/* Sample-data pill — same visual family as hud-btn, amber text, non-interactive */
+.hud-badge {
+  display: inline-flex;
+  align-items: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(16, 14, 10, 0.65);
+  border: 1px solid rgba(212, 164, 78, 0.45);
+  color: var(--amber-bright, #e8bc66);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 7px 13px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-family: var(--font-sans);
 }
 
 .hud-btn--clear:hover {
@@ -268,6 +293,7 @@ defineExpose({ loadDemoPolygon, clearAll })
   .hud-legend-row { font-size: 10px; }
   .hud-range { min-width: 48px; }
   .hud-btn { font-size: 12px; padding: 6px 12px; }
+  .hud-badge { font-size: 11px; padding: 6px 11px; }
 }
 
 /* Mobile: map height stacks, min 42vh */

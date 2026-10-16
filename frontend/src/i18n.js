@@ -55,6 +55,7 @@ const DICT = {
     dataNote: 'Source: Copernicus Sentinel-2 via Google Earth Engine (real query). Advisory: local LLM or rule fallback.',
     // Demo field & empty state
     loadDemo: 'Load demo field',
+    sampleBadge: 'Sample field',
     clearBtn: 'Clear',
     emptyStep1: 'Draw a field',
     emptyStep2: 'Generate report',
@@ -166,6 +167,7 @@ const DICT = {
     dataNote: '数据来源：Google Earth Engine 的 Copernicus Sentinel-2（真实查询）。建议生成：本地大模型或规则兜底。',
     // Demo field & empty state
     loadDemo: '加载示例地块',
+    sampleBadge: '示例数据',
     clearBtn: '清除',
     emptyStep1: '圈出地块',
     emptyStep2: '生成报告',
