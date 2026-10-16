@@ -11,6 +11,7 @@ const showAurora = computed(() => reduced.value !== 'reduce')
 const splitType = computed(() => (i18n.lang === 'zh' ? 'chars' : 'words'))
 // Respects Vite base so links work on Vercel (/static/) and EdgeOne (/) builds
 const appHref = import.meta.env.BASE_URL + 'app.html'
+const heroImg = import.meta.env.BASE_URL + 'orchard/hero-pomelo.jpg'
 </script>
 
 <template>
@@ -31,7 +32,7 @@ const appHref = import.meta.env.BASE_URL + 'app.html'
 
     <!-- Layer 3: Pomelo photo on the right, asymmetric clip-path cut -->
     <div class="hero-photo" aria-hidden="true">
-      <img src="/orchard/hero-pomelo.jpg" alt="" class="hero-photo-img" />
+      <img :src="heroImg" alt="" class="hero-photo-img" />
       <div class="hero-photo-fade" aria-hidden="true"></div>
     </div>
 

@@ -7,13 +7,13 @@ const t = useT()
 // Two stories, alternating left/right image
 const stories = computed(() => [
   {
-    img: '/orchard/aerial-grove.jpg',
+    img: import.meta.env.BASE_URL + 'orchard/aerial-grove.jpg',
     kicker: t('orchardKicker1'),
     h: t('orchardH1'),
     p: t('orchardP1'),
   },
   {
-    img: '/orchard/harvest-pomelos.jpg',
+    img: import.meta.env.BASE_URL + 'orchard/harvest-pomelos.jpg',
     kicker: t('orchardKicker2'),
     h: t('orchardH2'),
     p: t('orchardP2'),
