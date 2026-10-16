@@ -80,3 +80,20 @@ is explicitly out of scope for this project.
 vue-bits licensing note: MIT + Commons Clause — use as part of an application is
 explicitly permitted; only reselling/redistributing the components themselves is
 restricted. Copyright headers are kept in each component file.
+
+## Data sources & thresholds
+
+Every number the app shows traces to a published source — the same R1–R6 cards in the "Data sources" section of the landing page:
+
+| ID | Supports | Source |
+|----|----------|--------|
+| R1 | Sample field location (Dapu honey-pomelo GI zone) & landing copy | `https://finance.sina.cn/2026-09-27/detail-initfhut5013732.d.html` |
+| R2 | Industry stats on landing page (220,000 mu / 330,000 t) | `https://finance.sina.cn/2026-09-14/detail-inirutnu9437436.d.html` |
+| R3 | NDVI ≥ 0.70 = high-vigor canopy (**UAV canopy-pixel reference — see caveat**) | `https://www.mdpi.com/2071-1050/18/3/1324` |
+| R4 | Citrus-orchard NDVI ranges, incl. low values under stress/infection | `https://www.mdpi.com/2071-1050/16/13/5748` |
+| R5 | NDVI > 0.25 = vegetation vs soil/bare ground | `https://www.mdpi.com/2073-4395/15/6/1342` |
+| R6 | NDVI formula (B8−B4)/(B8+B4), Sentinel-2 bands, legend stops | `https://github.com/bilihubbili/ndvi-vegetation-monitoring-tool-for-netherlands-based-on-sentinel-2-msi-data` |
+
+**Threshold scope caveat:** R3's 0.70 comes from a UAV canopy-pixel study on sweet orange — not a Sentinel-2 10 m plot mean. Plot means mix in bare soil between rows, so the report never downgrades a plot on plot-mean alone when the trend is stable (see `app/advise.py`: `HIGH_VIGOR_UAV` and the prompt caveat).
+
+**Project settings, not literature:** alert rules like "NDVI drop > 0.10" are FieldLens's own settings, labeled as such — not published values.
